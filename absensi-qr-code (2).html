@@ -1,0 +1,1324 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Absensi Online QR Code</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsqr/1.4.0/jsQR.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --indigo:#4338ca; --indigo-2:#6366f1;
+    --sky:#0ea5e9; --teal:#14b8a6;
+    --emerald:#10b981; --rose:#f43f5e; --amber:#f59e0b;
+    --ink:#1e1b2e;
+    --glass: rgba(255,255,255,0.66);
+    --glass-line: rgba(255,255,255,0.55);
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;min-height:100vh;color:var(--ink);
+    font-family:'Segoe UI',system-ui,-apple-system,sans-serif;line-height:1.5;
+    background:
+      radial-gradient(1100px 700px at 6% -5%, #93c5fd 0%, transparent 55%),
+      radial-gradient(900px 650px at 96% 0%, #5eead4 0%, transparent 50%),
+      radial-gradient(1000px 800px at 50% 112%, #a5b4fc 0%, transparent 55%),
+      linear-gradient(160deg, #1e3a8a 0%, #1e40af 25%, #075985 55%, #0f766e 100%);
+    background-attachment:fixed;
+  }
+  .wrap{max-width:1280px;margin:0 auto;padding:26px 20px 70px;}
+
+  header{
+    display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;
+    margin-bottom:20px;background:var(--glass);border:1px solid var(--glass-line);
+    border-radius:20px;padding:18px 26px;backdrop-filter:blur(14px);
+    box-shadow:0 10px 40px rgba(30,58,138,.18);
+  }
+  .brand-eyebrow{font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;font-weight:700;color:var(--indigo);margin:0 0 4px;}
+  h1{margin:0;font-size:25px;font-weight:800;letter-spacing:-.01em;
+     background:linear-gradient(90deg, var(--indigo), var(--sky), var(--teal));
+     -webkit-background-clip:text;background-clip:text;color:transparent;}
+  .clock{font-size:12.5px;color:#334155;background:#fff;border:1px solid #dbeafe;border-radius:12px;padding:8px 14px;text-align:center;}
+  .clock b{display:block;font-size:17px;color:var(--indigo);font-variant-numeric:tabular-nums;}
+
+  /* Tabs */
+  .tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;}
+  .tab-btn{
+    padding:11px 20px;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;
+    background:rgba(255,255,255,.55);color:#334155;transition:.15s;
+    backdrop-filter:blur(10px);
+  }
+  .tab-btn.active{background:linear-gradient(135deg, var(--indigo), var(--sky));color:#fff;box-shadow:0 8px 20px rgba(67,56,202,.35);}
+  .tab-panel{display:none;}
+  .tab-panel.active{display:block;animation:fadeIn .25s ease;}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+
+  .card{
+    background:var(--glass);border:1px solid var(--glass-line);border-radius:20px;
+    backdrop-filter:blur(14px);box-shadow:0 10px 40px rgba(30,58,138,.16);overflow:hidden;margin-bottom:22px;
+  }
+  .card-head{font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#fff;padding:14px 22px;
+    background:linear-gradient(90deg, var(--indigo), var(--indigo-2));}
+  .card-head.alt{background:linear-gradient(90deg, var(--teal), var(--sky));}
+  .card-head.warn{background:linear-gradient(90deg, var(--amber), #f97316);}
+  .card-body{padding:22px;}
+
+  .grid2{display:grid;grid-template-columns:1fr;gap:22px;}
+  @media(min-width:980px){.grid2{grid-template-columns:400px 1fr;}}
+  .grid3{display:grid;grid-template-columns:1fr;gap:22px;}
+  @media(min-width:980px){.grid3{grid-template-columns:1fr 1fr;}}
+
+  form label{display:block;font-size:11.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--indigo);margin:14px 0 6px;}
+  form label:first-child{margin-top:0;}
+  input[type=text],input[type=number],input[type=date],input[type=password],input[type=time],select{
+    width:100%;padding:10px 12px;border:1.5px solid #c7d2fe;background:rgba(255,255,255,.9);
+    font-size:14.5px;color:var(--ink);border-radius:10px;transition:.15s;
+  }
+  input:focus,select:focus{outline:none;border-color:var(--indigo-2);box-shadow:0 0 0 4px rgba(99,102,241,.15);background:#fff;}
+  select{appearance:none;background-image:linear-gradient(45deg, transparent 50%, var(--indigo) 50%),linear-gradient(135deg, var(--indigo) 50%, transparent 50%);
+    background-position:calc(100% - 18px) 15px, calc(100% - 12px) 15px;background-size:6px 6px;background-repeat:no-repeat;}
+
+  .hint{font-size:12px;color:#1e40af;background:#eff6ff;border:1px dashed #bfdbfe;padding:10px 12px;border-radius:10px;margin-top:14px;}
+  .hint.warn{color:#92400e;background:#fffbeb;border-color:#fde68a;}
+
+  .btnbar{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap;}
+  button{font-size:12.5px;font-weight:700;letter-spacing:.03em;padding:11px 18px;border:none;border-radius:10px;cursor:pointer;
+    transition:transform .12s,box-shadow .12s,background .15s;}
+  button[type=submit],.btn-primary{background:linear-gradient(135deg, var(--indigo), var(--sky));color:#fff;box-shadow:0 8px 20px rgba(67,56,202,.35);}
+  button[type=submit]:hover,.btn-primary:hover{transform:translateY(-2px);box-shadow:0 12px 26px rgba(67,56,202,.45);}
+  button.secondary{background:linear-gradient(135deg, var(--teal), var(--sky));color:#fff;box-shadow:0 8px 20px rgba(20,184,166,.35);}
+  button.secondary:hover{transform:translateY(-2px);}
+  button.ghost{background:#fff;color:var(--indigo);border:1.5px solid #c7d2fe;}
+  button.ghost:hover{border-color:var(--indigo-2);}
+  button.amber{background:linear-gradient(135deg, var(--amber), #f97316);color:#fff;box-shadow:0 8px 20px rgba(245,158,11,.35);}
+  button.rose{background:linear-gradient(135deg, var(--rose), #e11d48);color:#fff;box-shadow:0 8px 20px rgba(244,63,94,.35);}
+  button:disabled{opacity:.45;cursor:not-allowed;transform:none !important;}
+
+  /* QR & scan area */
+  .qr-box{display:flex;flex-direction:column;align-items:center;gap:12px;padding:10px 0;}
+  #qrContainer{background:#fff;padding:14px;border-radius:16px;box-shadow:0 10px 30px rgba(30,58,138,.2);}
+  #qrContainer img, #qrContainer canvas{display:block;}
+  .token-chip{font-size:12px;background:#eef2ff;border:1px dashed #c7d2fe;color:#3730a3;padding:8px 14px;border-radius:10px;letter-spacing:.03em;word-break:break-all;text-align:center;}
+  .session-meta{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;}
+  .pill{font-size:11.5px;font-weight:700;padding:5px 12px;border-radius:999px;background:#e0e7ff;color:#4338ca;}
+  .pill.pagi{background:#dbeafe;color:#1d4ed8;}
+  .pill.siang{background:#fef3c7;color:#92400e;}
+  .pill.status-akan{background:#e0e7ff;color:#4338ca;}
+  .pill.status-berlangsung{background:#d1fae5;color:#047857;}
+  .pill.status-selesai{background:#f1f5f9;color:#64748b;}
+
+  .sesi-item{display:flex;justify-content:space-between;align-items:center;gap:10px;
+    background:#fff;border:1px solid #e0e7ff;border-radius:12px;padding:10px 14px;margin-bottom:8px;flex-wrap:wrap;}
+  .sesi-item .info{display:flex;flex-direction:column;gap:2px;}
+  .sesi-item .info b{font-size:13px;color:var(--ink);}
+  .sesi-item .info span{font-size:11.5px;color:#64748b;}
+  .sesi-item .actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+  .sesi-list-empty{font-size:12.5px;color:#93c5fd;text-align:center;padding:16px;font-style:italic;}
+
+  video#scanVideo{width:100%;max-width:320px;border-radius:14px;background:#000;}
+  .scan-status{font-size:12.5px;font-weight:600;padding:8px 12px;border-radius:10px;text-align:center;}
+  .scan-status.idle{background:#f1f5f9;color:#475569;}
+  .scan-status.ok{background:#d1fae5;color:#047857;}
+  .scan-status.bad{background:#ffe4e6;color:#be123c;}
+
+  /* Filter bar */
+  .filter-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:end;padding:16px 22px;background:rgba(255,255,255,.4);border-bottom:1px solid rgba(199,210,254,.6);}
+  .filter-field{display:flex;flex-direction:column;gap:5px;}
+  .filter-field label{font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--indigo);}
+  .filter-field input,.filter-field select{padding:8px 10px;border:1.5px solid #c7d2fe;border-radius:9px;background:#fff;font-size:13px;min-width:130px;}
+  .filter-field.search{flex:1;min-width:200px;}
+  .filter-field.search input{width:100%;}
+  .filter-clear{background:#fff;color:#be123c;border:1.5px solid #fecdd3;padding:8px 14px;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;height:38px;}
+  .filter-clear:hover{background:#fff1f2;}
+
+  .toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 22px;flex-wrap:wrap;background:rgba(255,255,255,.4);}
+  .count{font-size:12.5px;color:#1e40af;font-weight:600;}
+  .count b{color:var(--indigo);font-size:16px;}
+
+  .table-scroll{overflow:auto;max-height:600px;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  thead th{position:sticky;top:0;background:linear-gradient(90deg, var(--indigo), #4f46e5, var(--sky));color:#fff;
+    font-weight:700;letter-spacing:.03em;text-transform:uppercase;font-size:10.5px;text-align:left;padding:11px 12px;white-space:nowrap;}
+  tbody td{padding:10px 12px;border-bottom:1px solid rgba(199,210,254,.5);white-space:nowrap;color:#1e293b;}
+  tbody tr:nth-child(even){background:rgba(238,242,255,.5);}
+  tbody tr:hover{background:rgba(224,231,255,.6);}
+  tbody tr.editing-row{background:rgba(253,224,71,.35) !important;}
+  .empty-cell{color:#a5b4fc;font-style:italic;}
+  .badge{font-size:10.5px;font-weight:700;letter-spacing:.03em;padding:3px 10px;border-radius:999px;display:inline-block;}
+  .badge.hadir{background:#d1fae5;color:#047857;}
+  .badge.tidakhadir{background:#ffe4e6;color:#be123c;}
+  .badge.sesi{background:#e0e7ff;color:#4338ca;}
+  .row-actions{display:flex;gap:6px;}
+  .edit-btn{font-size:11.5px;font-weight:700;color:var(--indigo);background:#e0e7ff;border:none;cursor:pointer;padding:5px 10px;border-radius:8px;}
+  .edit-btn:hover{background:#c7d2fe;}
+  .del-btn{font-size:11.5px;font-weight:700;color:#e11d48;background:#ffe4e6;border:none;cursor:pointer;padding:5px 10px;border-radius:8px;}
+  .del-btn:hover{background:#fecdd3;}
+  .empty-state{padding:60px 20px;text-align:center;color:#93c5fd;font-size:13px;}
+  .empty-state .emoji{font-size:38px;display:block;margin-bottom:10px;}
+  .empty-state b{display:block;font-size:16px;color:#1e40af;margin-bottom:6px;font-weight:800;}
+
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);
+    background:linear-gradient(135deg, var(--indigo), var(--sky));color:#fff;padding:13px 22px;font-size:13px;font-weight:600;
+    opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;z-index:150;border-radius:12px;box-shadow:0 10px 30px rgba(67,56,202,.4);}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  footer{margin-top:22px;font-size:11.5px;color:rgba(255,255,255,.8);text-align:center;}
+
+  /* ===== LOGIN SCREEN ===== */
+  .login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+  .login-card{width:100%;max-width:420px;background:var(--glass);border:1px solid var(--glass-line);
+    border-radius:22px;backdrop-filter:blur(16px);box-shadow:0 20px 60px rgba(30,58,138,.3);padding:30px 28px;}
+  .login-logo{text-align:center;margin-bottom:18px;}
+  .login-logo .emoji{font-size:40px;display:block;margin-bottom:6px;}
+  .login-logo h1{font-size:20px;margin:0;}
+  .login-tabs{display:flex;gap:8px;background:rgba(255,255,255,.5);padding:6px;border-radius:14px;margin-bottom:20px;}
+  .login-tab-btn{flex:1;padding:10px;border:none;border-radius:10px;font-size:12.5px;font-weight:700;cursor:pointer;
+    background:transparent;color:#334155;transition:.15s;}
+  .login-tab-btn.active{background:linear-gradient(135deg, var(--indigo), var(--sky));color:#fff;box-shadow:0 6px 16px rgba(67,56,202,.3);}
+  .login-panel{display:none;}
+  .login-panel.active{display:block;animation:fadeIn .2s ease;}
+  .login-error{font-size:12px;color:#be123c;background:#ffe4e6;border:1px solid #fecdd3;padding:9px 12px;border-radius:10px;margin-top:12px;display:none;}
+  .login-error.show{display:block;}
+  .login-note{font-size:11.5px;color:#64748b;text-align:center;margin-top:16px;line-height:1.5;}
+
+  /* ===== USER BADGE / ROLE VISIBILITY ===== */
+  .user-badge{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #dbeafe;border-radius:12px;padding:8px 14px;}
+  .user-badge .role-tag{font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;padding:3px 9px;border-radius:999px;}
+  .user-badge .role-tag.admin{background:#e0e7ff;color:#4338ca;}
+  .user-badge .role-tag.mhs{background:#d1fae5;color:#047857;}
+  .user-badge .who{font-size:12.5px;font-weight:700;color:var(--ink);}
+  .btn-logout{background:#fff;color:#e11d48;border:1.5px solid #fecdd3;padding:8px 14px;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;}
+  .btn-logout:hover{background:#fff1f2;}
+  .header-right{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+  .role-hide{display:none !important;}
+  .locked-field{background:#f1f5f9 !important;color:#475569;}
+</style>
+</head>
+<body>
+
+<!-- ===== LAYAR LOGIN ===== -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">
+      <span class="emoji">🎓</span>
+      <h1>Absensi Online — QR Code</h1>
+    </div>
+    <div class="login-tabs">
+      <button type="button" class="login-tab-btn active" data-role="admin">🛡 Administrator</button>
+      <button type="button" class="login-tab-btn" data-role="mahasiswa">👩‍🎓 Mahasiswa</button>
+      <button type="button" class="login-tab-btn" data-role="daftar">📝 Daftar</button>
+    </div>
+
+    <!-- Login Admin -->
+    <div class="login-panel active" id="loginPanelAdmin">
+      <label>Username</label>
+      <input type="text" id="loginAdminUser" placeholder="username admin">
+      <label>Password</label>
+      <input type="password" id="loginAdminPass" placeholder="password admin">
+      <div class="btnbar">
+        <button type="button" class="btn-primary" id="btnLoginAdmin" style="width:100%;">Masuk sebagai Administrator</button>
+      </div>
+      <div class="login-error" id="loginAdminError">Username atau password salah.</div>
+    </div>
+
+    <!-- Login Mahasiswa -->
+    <div class="login-panel" id="loginPanelMhs">
+      <label>NIM</label>
+      <input type="text" id="loginMhsNim" placeholder="mis. 2210501034">
+      <label>Nama Lengkap</label>
+      <input type="text" id="loginMhsNama" placeholder="sesuai data terdaftar">
+      <div class="btnbar">
+        <button type="button" class="secondary" id="btnLoginMhs" style="width:100%;">Masuk &amp; Absen</button>
+      </div>
+      <div class="login-error" id="loginMhsError">NIM/Nama tidak ditemukan. Hubungi admin untuk didaftarkan.</div>
+      <p class="login-note">NIM &amp; Nama harus sudah didaftarkan sebelum bisa login. Belum punya akun? <a href="#" id="linkKeDaftar">Daftar di sini</a>.</p>
+    </div>
+
+    <!-- Daftar Akun Mahasiswa -->
+    <div class="login-panel" id="loginPanelDaftar">
+      <label>NIM</label>
+      <input type="text" id="daftarNim" placeholder="mis. 2210501034">
+      <label>Nama Lengkap</label>
+      <input type="text" id="daftarNama" placeholder="mis. Ayu Lestari">
+      <label>Program Studi</label>
+      <input type="text" id="daftarProdi" placeholder="mis. Teknik Informatika">
+      <label>Perguruan Tinggi (PTS)</label>
+      <input type="text" id="daftarPts" placeholder="mis. Universitas Bina Nusantara">
+      <div class="btnbar">
+        <button type="button" class="btn-primary" id="btnDaftarMhs" style="width:100%;">Daftar &amp; Masuk</button>
+      </div>
+      <div class="login-error" id="loginDaftarError">NIM sudah terdaftar. Gunakan menu Mahasiswa untuk login.</div>
+      <p class="login-note">Data yang didaftarkan otomatis masuk ke daftar mahasiswa yang hanya bisa dilihat &amp; dikelola oleh Admin.</p>
+    </div>
+  </div>
+</div>
+
+<div class="wrap" id="appWrap" style="display:none;">
+
+  <header>
+    <div>
+      <p class="brand-eyebrow">Sistem Presensi Digital</p>
+      <h1>Absensi Online — QR Code</h1>
+    </div>
+    <div class="header-right">
+      <div class="clock">WAKTU SEKARANG<b id="liveClock">00:00:00</b></div>
+      <div class="user-badge">
+        <span class="role-tag" id="userRoleTag">ADMIN</span>
+        <span class="who" id="userWhoText">Administrator</span>
+      </div>
+      <button type="button" class="btn-logout" id="btnLogout">Keluar</button>
+    </div>
+  </header>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="tabMhs" data-role-only="admin">👩‍🎓 Data Mahasiswa</button>
+    <button class="tab-btn" data-tab="tabQr">📷 Absensi QR</button>
+    <button class="tab-btn" data-tab="tabRekap" data-role-only="admin">🗂 Rekap Kehadiran</button>
+    <button class="tab-btn" data-tab="tabRiwayat" data-role-only="mahasiswa">📋 Riwayat Saya</button>
+  </div>
+
+  <!-- ===== TAB 1: DATA MAHASISWA ===== -->
+  <div class="tab-panel active" id="tabMhs" data-role-only="admin">
+    <div class="grid2">
+      <div class="card">
+        <div class="card-head" id="mhsFormTitle">✦ Tambah Mahasiswa</div>
+        <div class="card-body">
+          <form id="mhsForm">
+            <label>NIM</label>
+            <input type="text" id="mhsNim" placeholder="mis. 2210501034">
+            <label>Nama Lengkap</label>
+            <input type="text" id="mhsNama" placeholder="mis. Ayu Lestari">
+            <label>Program Studi</label>
+            <input type="text" id="mhsProdi" placeholder="mis. Teknik Informatika">
+            <label>Perguruan Tinggi Swasta (PTS)</label>
+            <input type="text" id="mhsPts" placeholder="mis. Universitas Bina Nusantara">
+            <div class="btnbar">
+              <button type="submit" id="mhsSubmitBtn">+ Simpan Mahasiswa</button>
+              <button type="button" class="ghost" id="mhsCancelEdit" style="display:none;">Batal Edit</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head alt">✦ Daftar Mahasiswa (<span id="mhsCount">0</span>)</div>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>No</th><th>NIM</th><th>Nama</th><th>Prodi</th><th>PTS</th><th>Aksi</th></tr></thead>
+            <tbody id="mhsTableBody"></tbody>
+          </table>
+          <div class="empty-state" id="mhsEmptyState">
+            <span class="emoji">🎓</span><b>Belum ada data mahasiswa</b>
+            Tambahkan lewat formulir di sebelah kiri.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== TAB 2: ABSENSI QR ===== -->
+  <div class="tab-panel" id="tabQr">
+    <div class="grid3" data-role-only="admin">
+      <!-- Kelola Mata Kuliah -->
+      <div class="card">
+        <div class="card-head" id="matkulFormTitle">✦ Kelola Mata Kuliah &amp; Jadwal</div>
+        <div class="card-body">
+          <form id="matkulForm">
+            <label>Nama Mata Kuliah</label>
+            <input type="text" id="matkulNama" placeholder="mis. Basis Data">
+            <label>Jam Mulai</label>
+            <input type="time" id="matkulJamMulai">
+            <label>Jam Selesai (batas hadir)</label>
+            <input type="time" id="matkulJamSelesai">
+            <p class="hint">Mahasiswa yang absen setelah <b>Jam Selesai</b> otomatis ditandai <b>Tidak Hadir</b>.</p>
+            <div class="btnbar">
+              <button type="submit" id="matkulSubmitBtn">+ Simpan Mata Kuliah</button>
+              <button type="button" class="ghost" id="matkulCancelEdit" style="display:none;">Batal Edit</button>
+            </div>
+          </form>
+        </div>
+        <div class="table-scroll" style="max-height:260px;">
+          <table>
+            <thead><tr><th>Mata Kuliah</th><th>Jam</th><th>Aksi</th></tr></thead>
+            <tbody id="matkulTableBody"></tbody>
+          </table>
+          <div class="empty-state" id="matkulEmptyState" style="padding:30px 20px;">
+            <span class="emoji">📚</span><b>Belum ada mata kuliah</b>
+            Tambahkan lewat formulir di atas.
+          </div>
+        </div>
+      </div>
+
+      <!-- Generate QR -->
+      <div class="card">
+        <div class="card-head">✦ Buat Sesi &amp; QR Absensi</div>
+        <div class="card-body">
+          <label>Tanggal</label>
+          <input type="date" id="sesiTanggal">
+          <label>Pilih Mata Kuliah</label>
+          <select id="sesiPilihMatkul"><option value="">-- pilih mata kuliah --</option></select>
+          <p class="hint">Status kehadiran dihitung otomatis berdasarkan jam selesai mata kuliah yang dipilih.</p>
+          <div class="btnbar">
+            <button type="button" class="btn-primary" id="btnBuatQr">Buat QR Absensi</button>
+          </div>
+
+          <div id="sesiInfo" style="display:none;margin-top:20px;">
+            <div class="qr-box">
+              <div id="qrContainer"></div>
+              <div class="session-meta">
+                <span class="pill" id="sesiPillTanggal"></span>
+                <span class="pill" id="sesiPillSesi"></span>
+              </div>
+              <div class="token-chip">Kode sesi: <span id="sesiTokenText"></span></div>
+            </div>
+          </div>
+
+          <p class="hint" style="margin-top:20px;">Sesi Mata Kuliah Aktif Hari Ini</p>
+          <div id="sesiAktifList" style="margin-top:10px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid3" style="margin-top:0;">
+      <!-- Jadwal untuk Mahasiswa memilih sesi -->
+      <div class="card" data-role-only="mahasiswa">
+        <div class="card-head">✦ Jadwal Mata Kuliah Hari Ini</div>
+        <div class="card-body">
+          <div id="jadwalMhsList"></div>
+        </div>
+      </div>
+
+      <!-- Scan / Absen -->
+      <div class="card">
+        <div class="card-head alt">✦ Absen Sekarang</div>
+        <div class="card-body">
+          <div class="qr-box">
+            <video id="scanVideo" autoplay playsinline muted style="display:none;"></video>
+            <canvas id="scanCanvas" style="display:none;"></canvas>
+            <div class="btnbar" style="margin-top:0;">
+              <button type="button" class="secondary" id="btnStartScan">Aktifkan Kamera &amp; Scan QR</button>
+              <button type="button" class="ghost" id="btnStopScan" style="display:none;">Hentikan Kamera</button>
+            </div>
+            <div class="scan-status idle" id="scanStatus">Kamera belum aktif. Pilih jadwal di atas, arahkan ke QR di layar admin, atau masukkan kode sesi manual di bawah.</div>
+
+            <label style="align-self:flex-start;width:100%;">Atau masukkan kode sesi manual</label>
+            <input type="text" id="manualToken" placeholder="tempel/ketik kode sesi di sini">
+            <div class="btnbar" style="margin-top:8px;">
+              <button type="button" class="ghost" id="btnVerifyManual">Verifikasi Kode</button>
+            </div>
+
+            <div id="absenForm" style="display:none;width:100%;margin-top:8px;">
+              <label data-role-only="admin">Pilih NIM Anda</label>
+              <select id="absenNimSelect" data-role-only="admin"><option value="">-- pilih NIM --</option></select>
+              <div class="token-chip" id="absenMhsIdentity" data-role-only="mahasiswa" style="display:none;width:100%;"></div>
+              <div class="btnbar">
+                <button type="button" class="btn-primary" id="btnKonfirmasiAbsen">✓ Konfirmasi Kehadiran</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===== TAB 4: RIWAYAT SAYA (MAHASISWA) ===== -->
+  <div class="tab-panel" id="tabRiwayat" data-role-only="mahasiswa">
+    <div class="card">
+      <div class="card-head alt">✦ Riwayat Kehadiran Saya</div>
+      <div class="toolbar">
+        <span class="count"><b id="riwayatCount">0</b> catatan kehadiran</span>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>No</th><th>Tanggal</th><th>Mata Kuliah</th><th>Jam Absen</th><th>Status</th></tr></thead>
+          <tbody id="riwayatTableBody"></tbody>
+        </table>
+        <div class="empty-state" id="riwayatEmptyState">
+          <span class="emoji">🗂</span><b>Belum ada riwayat kehadiran</b>
+          Lakukan absen lewat tab "Absensi QR".
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== TAB 3: REKAP KEHADIRAN ===== -->
+  <div class="tab-panel" id="tabRekap" data-role-only="admin">
+    <div class="card">
+      <div class="card-head warn" id="rekapFormTitle">
+        <span>✦ Formulir Kehadiran (Manual/Edit)</span>
+      </div>
+      <div class="card-body">
+        <div class="grid3">
+          <div>
+            <label>Tanggal</label>
+            <input type="date" id="rekapTanggal">
+            <label>Mata Kuliah</label>
+            <select id="rekapMatkulSelect"><option value="">-- pilih mata kuliah --</option></select>
+            <label>NIM</label>
+            <select id="rekapNim"><option value="">-- pilih NIM --</option></select>
+          </div>
+          <div>
+            <label>Jam Absen</label>
+            <input type="text" id="rekapJam" placeholder="mis. 10:15:00">
+            <label>Status Kehadiran</label>
+            <select id="rekapStatus">
+              <option value="Hadir">Hadir</option>
+              <option value="Tidak Hadir">Tidak Hadir</option>
+            </select>
+            <p class="hint warn">Status otomatis dihitung saat absen via QR, tapi admin bisa mengoreksi manual di sini bila perlu.</p>
+          </div>
+        </div>
+        <div class="btnbar">
+          <button type="submit" form="dummyForm" id="rekapSubmitBtn" onclick="simpanRekapManual(event)">+ Simpan Data</button>
+          <button type="button" class="ghost" id="rekapCancelEdit" style="display:none;">Batal Edit</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head alt">✦ Rekap Kehadiran</div>
+      <div class="filter-bar">
+        <div class="filter-field search">
+          <label>Cari</label>
+          <input type="text" id="filterSearch" placeholder="cari nama atau NIM...">
+        </div>
+        <div class="filter-field">
+          <label>Tanggal</label>
+          <input type="date" id="filterTanggal">
+        </div>
+        <div class="filter-field">
+          <label>Mata Kuliah</label>
+          <select id="filterMatkul"><option value="">Semua</option></select>
+        </div>
+        <div class="filter-field">
+          <label>Status</label>
+          <select id="filterStatus"><option value="">Semua</option><option value="Hadir">Hadir</option><option value="Tidak Hadir">Tidak Hadir</option></select>
+        </div>
+        <div class="filter-field">
+          <label>Prodi</label>
+          <select id="filterProdi"><option value="">Semua</option></select>
+        </div>
+        <button type="button" class="filter-clear" id="filterClear">Reset Filter</button>
+      </div>
+      <div class="toolbar">
+        <span class="count"><b id="rowCount">0</b> dari <b id="rowTotal">0</b> baris ditampilkan</span>
+        <div class="btnbar" style="margin:0;">
+          <button type="button" class="secondary" id="downloadXlsx">⬇ Unduh Excel (.xlsx)</button>
+          <button type="button" class="amber" id="downloadCsv">⬇ Unduh CSV</button>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr><th>No</th><th>Tanggal</th><th>Mata Kuliah</th><th>NIM</th><th>Nama</th><th>Prodi</th><th>PTS</th><th>Jam Absen</th><th>Status</th><th>Aksi</th></tr>
+          </thead>
+          <tbody id="rekapTableBody"></tbody>
+        </table>
+        <div class="empty-state" id="rekapEmptyState">
+          <span class="emoji">🗂</span><b>Belum ada data kehadiran</b>
+          Absen lewat tab "Absensi QR" atau isi manual di atas.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>Data tersimpan sementara selama halaman ini terbuka — unduh Excel/CSV secara berkala agar data tidak hilang saat tab ditutup. Aplikasi ini berjalan sepenuhnya di browser (tanpa server), sehingga akun mahasiswa hanya bisa login setelah admin mendaftarkan NIM &amp; Namanya pada sesi/perangkat yang sama.</footer>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============ util ============ */
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2400);
+}
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+document.getElementById('sesiTanggal').value = todayStr();
+document.getElementById('rekapTanggal').value = todayStr();
+
+/* live clock */
+function tickClock(){
+  document.getElementById('liveClock').textContent = new Date().toLocaleTimeString('id-ID');
+}
+tickClock(); setInterval(tickClock,1000);
+setInterval(()=>{ renderSesiAktifList(); renderJadwalMhs(); }, 15000);
+
+/* tabs */
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.tab).classList.add('active');
+  });
+});
+
+/* ============ LOGIN / SESI PENGGUNA ============ */
+// Kredensial admin demo (client-side only — untuk pemakaian produksi, ganti dengan autentikasi server sungguhan).
+const ADMIN_CREDENTIALS = { username: 'admin', password: 'admin123' };
+let currentUser = null; // {role:'admin'} atau {role:'mahasiswa', nim, nama}
+
+const loginScreen = document.getElementById('loginScreen');
+const appWrap = document.getElementById('appWrap');
+
+const LOGIN_PANEL_MAP = { admin:'loginPanelAdmin', mahasiswa:'loginPanelMhs', daftar:'loginPanelDaftar' };
+function switchLoginTab(role){
+  document.querySelectorAll('.login-tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.role===role));
+  document.querySelectorAll('.login-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById(LOGIN_PANEL_MAP[role]).classList.add('active');
+}
+document.querySelectorAll('.login-tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=> switchLoginTab(btn.dataset.role));
+});
+document.getElementById('linkKeDaftar').addEventListener('click', (e)=>{ e.preventDefault(); switchLoginTab('daftar'); });
+
+document.getElementById('btnLoginAdmin').addEventListener('click', ()=>{
+  const user = document.getElementById('loginAdminUser').value.trim();
+  const pass = document.getElementById('loginAdminPass').value;
+  const err = document.getElementById('loginAdminError');
+  if(user===ADMIN_CREDENTIALS.username && pass===ADMIN_CREDENTIALS.password){
+    err.classList.remove('show');
+    currentUser = { role:'admin' };
+    afterLogin();
+  } else {
+    err.classList.add('show');
+  }
+});
+
+document.getElementById('btnLoginMhs').addEventListener('click', ()=>{
+  const nim = document.getElementById('loginMhsNim').value.trim();
+  const nama = document.getElementById('loginMhsNama').value.trim();
+  const err = document.getElementById('loginMhsError');
+  const m = mahasiswa.find(x=>x.nim.toLowerCase()===nim.toLowerCase() && x.nama.toLowerCase()===nama.toLowerCase());
+  if(nim && nama && m){
+    err.classList.remove('show');
+    currentUser = { role:'mahasiswa', nim:m.nim, nama:m.nama };
+    afterLogin();
+  } else {
+    err.classList.add('show');
+  }
+});
+
+document.getElementById('btnDaftarMhs').addEventListener('click', ()=>{
+  const nim = document.getElementById('daftarNim').value.trim();
+  const nama = document.getElementById('daftarNama').value.trim();
+  const prodi = document.getElementById('daftarProdi').value.trim();
+  const pts = document.getElementById('daftarPts').value.trim();
+  const err = document.getElementById('loginDaftarError');
+
+  if(!nim || !nama || !prodi || !pts){
+    err.textContent = 'Semua kolom wajib diisi.';
+    err.classList.add('show');
+    return;
+  }
+  if(mahasiswa.some(m=>m.nim.toLowerCase()===nim.toLowerCase())){
+    err.textContent = 'NIM sudah terdaftar. Gunakan menu Mahasiswa untuk login.';
+    err.classList.add('show');
+    return;
+  }
+  err.classList.remove('show');
+
+  mahasiswa.push({ id: nextMhsId++, nim, nama, prodi, pts });
+  renderMhs();
+
+  currentUser = { role:'mahasiswa', nim, nama };
+  document.getElementById('daftarNim').value='';
+  document.getElementById('daftarNama').value='';
+  document.getElementById('daftarProdi').value='';
+  document.getElementById('daftarPts').value='';
+  afterLogin();
+});
+
+// izinkan tekan Enter untuk login
+document.getElementById('loginAdminPass').addEventListener('keydown', e=>{ if(e.key==='Enter') document.getElementById('btnLoginAdmin').click(); });
+document.getElementById('loginMhsNama').addEventListener('keydown', e=>{ if(e.key==='Enter') document.getElementById('btnLoginMhs').click(); });
+document.getElementById('daftarPts').addEventListener('keydown', e=>{ if(e.key==='Enter') document.getElementById('btnDaftarMhs').click(); });
+
+function afterLogin(){
+  loginScreen.style.display='none';
+  appWrap.style.display='block';
+  applyRoleUI();
+
+  const roleTag = document.getElementById('userRoleTag');
+  const whoText = document.getElementById('userWhoText');
+  if(currentUser.role==='admin'){
+    roleTag.textContent='ADMIN'; roleTag.className='role-tag admin';
+    whoText.textContent='Administrator';
+    activateTab('tabMhs');
+  } else {
+    roleTag.textContent='MAHASISWA'; roleTag.className='role-tag mhs';
+    whoText.textContent = currentUser.nim + ' — ' + currentUser.nama;
+    activateTab('tabQr');
+    renderRiwayat();
+    renderJadwalMhs();
+  }
+  showToast('Berhasil masuk sebagai ' + (currentUser.role==='admin' ? 'Administrator' : currentUser.nama) + '.');
+}
+
+function activateTab(tabId){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.tab===tabId));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.toggle('active', p.id===tabId));
+}
+
+function applyRoleUI(){
+  if(!currentUser) return;
+  document.querySelectorAll('[data-role-only]').forEach(el=>{
+    el.classList.toggle('role-hide', el.dataset.roleOnly !== currentUser.role);
+  });
+}
+
+document.getElementById('btnLogout').addEventListener('click', ()=>{
+  currentUser = null;
+  stopScan();
+  document.getElementById('absenForm').style.display='none';
+  document.getElementById('manualToken').value='';
+  document.getElementById('loginAdminUser').value='';
+  document.getElementById('loginAdminPass').value='';
+  document.getElementById('loginMhsNim').value='';
+  document.getElementById('loginMhsNama').value='';
+  document.getElementById('daftarNim').value='';
+  document.getElementById('daftarNama').value='';
+  document.getElementById('daftarProdi').value='';
+  document.getElementById('daftarPts').value='';
+  document.getElementById('loginAdminError').classList.remove('show');
+  document.getElementById('loginMhsError').classList.remove('show');
+  document.getElementById('loginDaftarError').classList.remove('show');
+  switchLoginTab('admin');
+  appWrap.style.display='none';
+  loginScreen.style.display='flex';
+  showToast('Anda telah keluar.');
+});
+
+/* ============ DATA MAHASISWA (master) ============ */
+let mahasiswa = [];
+let nextMhsId = 1;
+let editingMhsId = null;
+
+const mhsForm = document.getElementById('mhsForm');
+const mhsTableBody = document.getElementById('mhsTableBody');
+const mhsEmptyState = document.getElementById('mhsEmptyState');
+const mhsCount = document.getElementById('mhsCount');
+const mhsSubmitBtn = document.getElementById('mhsSubmitBtn');
+const mhsFormTitle = document.getElementById('mhsFormTitle');
+const mhsCancelEditBtn = document.getElementById('mhsCancelEdit');
+
+function renderMhs(){
+  mhsTableBody.innerHTML='';
+  if(mahasiswa.length===0){
+    mhsEmptyState.style.display='block';
+  } else {
+    mhsEmptyState.style.display='none';
+    mahasiswa.forEach((m,i)=>{
+      const tr=document.createElement('tr');
+      if(m.id===editingMhsId) tr.classList.add('editing-row');
+      tr.innerHTML=`<td>${i+1}</td><td>${m.nim}</td><td>${m.nama}</td><td>${m.prodi||'-'}</td><td>${m.pts||'-'}</td>
+        <td><div class="row-actions">
+          <button class="edit-btn" data-id="${m.id}">Edit</button>
+          <button class="del-btn" data-id="${m.id}">Hapus</button>
+        </div></td>`;
+      mhsTableBody.appendChild(tr);
+    });
+  }
+  mhsCount.textContent = mahasiswa.length;
+  refreshNimDropdowns();
+  refreshProdiFilter();
+}
+
+mhsForm.addEventListener('submit', function(e){
+  e.preventDefault();
+  const nim = document.getElementById('mhsNim').value.trim();
+  const nama = document.getElementById('mhsNama').value.trim();
+  const prodi = document.getElementById('mhsProdi').value.trim();
+  const pts = document.getElementById('mhsPts').value.trim();
+  if(!nim || !nama){ showToast('NIM dan Nama wajib diisi.'); return; }
+
+  if(editingMhsId!==null){
+    const idx = mahasiswa.findIndex(m=>m.id===editingMhsId);
+    if(idx!==-1) mahasiswa[idx] = {...mahasiswa[idx], nim, nama, prodi, pts};
+    showToast('Data mahasiswa diperbarui.');
+    cancelEditMhs();
+  } else {
+    if(mahasiswa.some(m=>m.nim===nim)){ showToast('NIM sudah terdaftar.'); return; }
+    mahasiswa.push({id:nextMhsId++, nim, nama, prodi, pts});
+    showToast('Mahasiswa ditambahkan.');
+    mhsForm.reset();
+  }
+  renderMhs();
+});
+
+function enterEditMhs(m){
+  editingMhsId = m.id;
+  document.getElementById('mhsNim').value = m.nim;
+  document.getElementById('mhsNama').value = m.nama;
+  document.getElementById('mhsProdi').value = m.prodi;
+  document.getElementById('mhsPts').value = m.pts;
+  mhsSubmitBtn.textContent = '✓ Update Mahasiswa';
+  mhsFormTitle.textContent = '✎ Edit Mahasiswa';
+  mhsCancelEditBtn.style.display='inline-block';
+  renderMhs();
+}
+function cancelEditMhs(){
+  editingMhsId=null;
+  mhsForm.reset();
+  mhsSubmitBtn.textContent='+ Simpan Mahasiswa';
+  mhsFormTitle.textContent='✦ Tambah Mahasiswa';
+  mhsCancelEditBtn.style.display='none';
+  renderMhs();
+}
+mhsCancelEditBtn.addEventListener('click', cancelEditMhs);
+
+mhsTableBody.addEventListener('click', function(e){
+  const id = Number(e.target.dataset.id);
+  if(e.target.classList.contains('edit-btn')){
+    const m = mahasiswa.find(x=>x.id===id); if(m) enterEditMhs(m);
+  }
+  if(e.target.classList.contains('del-btn')){
+    mahasiswa = mahasiswa.filter(x=>x.id!==id);
+    if(editingMhsId===id) cancelEditMhs();
+    renderMhs();
+    showToast('Data mahasiswa dihapus.');
+  }
+});
+
+function refreshNimDropdowns(){
+  const opts = '<option value="">-- pilih NIM --</option>' + mahasiswa.map(m=>`<option value="${m.nim}">${m.nim} — ${m.nama}</option>`).join('');
+  document.getElementById('absenNimSelect').innerHTML = opts;
+  document.getElementById('rekapNim').innerHTML = opts;
+}
+function refreshProdiFilter(){
+  const prodiList = [...new Set(mahasiswa.map(m=>m.prodi).filter(Boolean))];
+  document.getElementById('filterProdi').innerHTML = '<option value="">Semua</option>' + prodiList.map(p=>`<option value="${p}">${p}</option>`).join('');
+}
+
+/* ============ MATA KULIAH (dikelola admin) ============ */
+let matkulList = [];
+let nextMatkulId = 1;
+let editingMatkulId = null;
+
+const matkulForm = document.getElementById('matkulForm');
+const matkulTableBody = document.getElementById('matkulTableBody');
+const matkulEmptyState = document.getElementById('matkulEmptyState');
+const matkulSubmitBtn = document.getElementById('matkulSubmitBtn');
+const matkulFormTitle = document.getElementById('matkulFormTitle');
+const matkulCancelEditBtn = document.getElementById('matkulCancelEdit');
+
+function renderMatkul(){
+  matkulTableBody.innerHTML='';
+  if(matkulList.length===0){
+    matkulEmptyState.style.display='block';
+  } else {
+    matkulEmptyState.style.display='none';
+    matkulList.forEach(mk=>{
+      const tr=document.createElement('tr');
+      if(mk.id===editingMatkulId) tr.classList.add('editing-row');
+      tr.innerHTML=`<td>${mk.nama}</td><td>${mk.jamMulai}–${mk.jamSelesai}</td>
+        <td><div class="row-actions">
+          <button class="edit-btn" data-id="${mk.id}">Edit</button>
+          <button class="del-btn" data-id="${mk.id}">Hapus</button>
+        </div></td>`;
+      matkulTableBody.appendChild(tr);
+    });
+  }
+  refreshMatkulDropdowns();
+}
+
+matkulForm.addEventListener('submit', function(e){
+  e.preventDefault();
+  const nama = document.getElementById('matkulNama').value.trim();
+  const jamMulai = document.getElementById('matkulJamMulai').value;
+  const jamSelesai = document.getElementById('matkulJamSelesai').value;
+  if(!nama || !jamMulai || !jamSelesai){ showToast('Lengkapi nama dan jam mata kuliah.'); return; }
+  if(jamSelesai <= jamMulai){ showToast('Jam selesai harus setelah jam mulai.'); return; }
+
+  if(editingMatkulId!==null){
+    const idx = matkulList.findIndex(m=>m.id===editingMatkulId);
+    if(idx!==-1) matkulList[idx] = {...matkulList[idx], nama, jamMulai, jamSelesai};
+    showToast('Mata kuliah diperbarui.');
+    cancelEditMatkul();
+  } else {
+    matkulList.push({id:nextMatkulId++, nama, jamMulai, jamSelesai});
+    showToast('Mata kuliah ditambahkan.');
+    matkulForm.reset();
+  }
+  renderMatkul();
+});
+
+function enterEditMatkul(mk){
+  editingMatkulId = mk.id;
+  document.getElementById('matkulNama').value = mk.nama;
+  document.getElementById('matkulJamMulai').value = mk.jamMulai;
+  document.getElementById('matkulJamSelesai').value = mk.jamSelesai;
+  matkulSubmitBtn.textContent = '✓ Update Mata Kuliah';
+  matkulFormTitle.textContent = '✎ Edit Mata Kuliah';
+  matkulCancelEditBtn.style.display='inline-block';
+  renderMatkul();
+}
+function cancelEditMatkul(){
+  editingMatkulId=null;
+  matkulForm.reset();
+  matkulSubmitBtn.textContent='+ Simpan Mata Kuliah';
+  matkulFormTitle.textContent='✦ Kelola Mata Kuliah & Jadwal';
+  matkulCancelEditBtn.style.display='none';
+  renderMatkul();
+}
+matkulCancelEditBtn.addEventListener('click', cancelEditMatkul);
+
+matkulTableBody.addEventListener('click', function(e){
+  const id = Number(e.target.dataset.id);
+  if(e.target.classList.contains('edit-btn')){
+    const mk = matkulList.find(x=>x.id===id); if(mk) enterEditMatkul(mk);
+  }
+  if(e.target.classList.contains('del-btn')){
+    matkulList = matkulList.filter(x=>x.id!==id);
+    if(editingMatkulId===id) cancelEditMatkul();
+    renderMatkul();
+    showToast('Mata kuliah dihapus.');
+  }
+});
+
+function refreshMatkulDropdowns(){
+  const opts = '<option value="">-- pilih mata kuliah --</option>' + matkulList.map(mk=>`<option value="${mk.id}">${mk.nama} (${mk.jamMulai}–${mk.jamSelesai})</option>`).join('');
+  document.getElementById('sesiPilihMatkul').innerHTML = opts;
+  document.getElementById('rekapMatkulSelect').innerHTML = opts;
+}
+
+/* ============ SESI ABSEN AKTIF (dibuat admin per mata kuliah) ============ */
+let activeSessions = []; // {id, tanggal, matkulId, matkulNama, jamMulai, jamSelesai, token}
+let nextSesiId = 1;
+let selectedSession = null; // sesi yang sedang diverifikasi untuk konfirmasi kehadiran
+
+function getSesiStatus(sesi){
+  if(sesi.tanggal !== todayStr()) return sesi.tanggal < todayStr() ? 'selesai' : 'akan';
+  const now = new Date();
+  const [hM,mM] = sesi.jamMulai.split(':').map(Number);
+  const [hS,mS] = sesi.jamSelesai.split(':').map(Number);
+  const mulai = new Date(now); mulai.setHours(hM,mM,0,0);
+  const selesai = new Date(now); selesai.setHours(hS,mS,0,0);
+  if(now < mulai) return 'akan';
+  if(now > selesai) return 'selesai';
+  return 'berlangsung';
+}
+function sesiStatusLabel(st){
+  return st==='akan' ? 'Akan Berlangsung' : st==='berlangsung' ? 'Sedang Berlangsung' : 'Selesai';
+}
+
+document.getElementById('btnBuatQr').addEventListener('click', function(){
+  const tanggal = document.getElementById('sesiTanggal').value || todayStr();
+  const matkulId = Number(document.getElementById('sesiPilihMatkul').value);
+  const mk = matkulList.find(m=>m.id===matkulId);
+  if(!mk){ showToast('Pilih mata kuliah terlebih dahulu.'); return; }
+  const rand = Math.random().toString(36).slice(2,8).toUpperCase();
+  const token = `ABSEN|${tanggal}|${mk.nama}|${rand}`;
+  const sesi = { id: nextSesiId++, tanggal, matkulId: mk.id, matkulNama: mk.nama, jamMulai: mk.jamMulai, jamSelesai: mk.jamSelesai, token };
+  activeSessions.push(sesi);
+  displaySesiQr(sesi);
+  renderSesiAktifList();
+  renderJadwalMhs();
+  showToast('QR sesi absensi "' + mk.nama + '" dibuat. Tampilkan ke mahasiswa.');
+});
+
+function displaySesiQr(sesi){
+  const qrContainer = document.getElementById('qrContainer');
+  qrContainer.innerHTML = '';
+  new QRCode(qrContainer, { text: sesi.token, width:220, height:220, colorDark:"#1e1b4b", colorLight:"#ffffff" });
+
+  document.getElementById('sesiTokenText').textContent = sesi.token;
+  document.getElementById('sesiPillTanggal').textContent = sesi.tanggal;
+  document.getElementById('sesiPillSesi').textContent = sesi.matkulNama + ' (' + sesi.jamMulai + '–' + sesi.jamSelesai + ')';
+  document.getElementById('sesiPillSesi').className = 'pill status-' + getSesiStatus(sesi);
+  document.getElementById('sesiInfo').style.display='block';
+}
+
+function renderSesiAktifList(){
+  const box = document.getElementById('sesiAktifList');
+  const todays = activeSessions.filter(s=>s.tanggal===todayStr()).slice().sort((a,b)=> a.jamMulai < b.jamMulai ? -1 : 1);
+  if(todays.length===0){
+    box.innerHTML = '<div class="sesi-list-empty">Belum ada sesi absensi dibuat hari ini.</div>';
+    return;
+  }
+  box.innerHTML = todays.map(s=>{
+    const st = getSesiStatus(s);
+    return `<div class="sesi-item">
+      <div class="info">
+        <b>${s.matkulNama}</b>
+        <span>${s.jamMulai}–${s.jamSelesai} · Kode: ${s.token}</span>
+      </div>
+      <div class="actions">
+        <span class="pill status-${st}">${sesiStatusLabel(st)}</span>
+        <button type="button" class="edit-btn" data-showqr="${s.id}">Tampilkan QR</button>
+        <button type="button" class="del-btn" data-hapussesi="${s.id}">Hapus</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+document.getElementById('sesiAktifList').addEventListener('click', function(e){
+  const showId = Number(e.target.dataset.showqr);
+  const delId = Number(e.target.dataset.hapussesi);
+  if(showId){
+    const s = activeSessions.find(x=>x.id===showId); if(s) displaySesiQr(s);
+  }
+  if(delId){
+    activeSessions = activeSessions.filter(x=>x.id!==delId);
+    renderSesiAktifList();
+    renderJadwalMhs();
+    showToast('Sesi absensi dihapus.');
+  }
+});
+
+/* ============ JADWAL UNTUK MAHASISWA (pilih sesi sesuai jam) ============ */
+function renderJadwalMhs(){
+  if(!currentUser || currentUser.role!=='mahasiswa') return;
+  const box = document.getElementById('jadwalMhsList');
+  const todays = activeSessions.filter(s=>s.tanggal===todayStr()).slice().sort((a,b)=> a.jamMulai < b.jamMulai ? -1 : 1);
+  if(todays.length===0){
+    box.innerHTML = '<div class="sesi-list-empty">Belum ada jadwal absensi mata kuliah hari ini. Hubungi admin/dosen.</div>';
+    return;
+  }
+  const sudahAbsen = new Set(absensi.filter(a=>a.nim===currentUser.nim && a.tanggal===todayStr()).map(a=>a.token));
+  box.innerHTML = todays.map(s=>{
+    const st = getSesiStatus(s);
+    const done = sudahAbsen.has(s.token);
+    return `<div class="sesi-item">
+      <div class="info">
+        <b>${s.matkulNama}</b>
+        <span>${s.jamMulai}–${s.jamSelesai}</span>
+      </div>
+      <div class="actions">
+        <span class="pill status-${st}">${sesiStatusLabel(st)}</span>
+        <button type="button" class="btn-primary" data-pilihsesi="${s.id}" ${done?'disabled':''}>${done?'✓ Sudah Absen':'Absen'}</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+document.getElementById('jadwalMhsList').addEventListener('click', function(e){
+  const id = Number(e.target.dataset.pilihsesi);
+  if(!id) return;
+  const s = activeSessions.find(x=>x.id===id);
+  if(s) handleScannedToken(s.token);
+  document.getElementById('absenForm').scrollIntoView({behavior:'smooth', block:'center'});
+});
+
+/* ============ SCAN QR (kamera) ============ */
+let scanning = false;
+let videoStream = null;
+const scanVideo = document.getElementById('scanVideo');
+const scanCanvas = document.getElementById('scanCanvas');
+const scanStatus = document.getElementById('scanStatus');
+
+document.getElementById('btnStartScan').addEventListener('click', async function(){
+  try{
+    videoStream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:'environment' } });
+    scanVideo.srcObject = videoStream;
+    scanVideo.style.display='block';
+    document.getElementById('btnStartScan').style.display='none';
+    document.getElementById('btnStopScan').style.display='inline-block';
+    scanning = true;
+    setScanStatus('idle','Kamera aktif — arahkan ke QR sesi absensi...');
+    requestAnimationFrame(scanLoop);
+  } catch(err){
+    setScanStatus('bad','Tidak bisa mengakses kamera. Gunakan input kode manual di bawah.');
+  }
+});
+
+document.getElementById('btnStopScan').addEventListener('click', stopScan);
+
+function stopScan(){
+  scanning = false;
+  if(videoStream){ videoStream.getTracks().forEach(t=>t.stop()); videoStream=null; }
+  scanVideo.style.display='none';
+  document.getElementById('btnStartScan').style.display='inline-block';
+  document.getElementById('btnStopScan').style.display='none';
+}
+
+function scanLoop(){
+  if(!scanning) return;
+  if(scanVideo.readyState === scanVideo.HAVE_ENOUGH_DATA && typeof jsQR !== 'undefined'){
+    scanCanvas.width = scanVideo.videoWidth;
+    scanCanvas.height = scanVideo.videoHeight;
+    const ctx = scanCanvas.getContext('2d');
+    ctx.drawImage(scanVideo, 0, 0, scanCanvas.width, scanCanvas.height);
+    const imageData = ctx.getImageData(0,0,scanCanvas.width, scanCanvas.height);
+    const code = jsQR(imageData.data, imageData.width, imageData.height);
+    if(code && code.data){
+      handleScannedToken(code.data);
+      stopScan();
+      return;
+    }
+  }
+  requestAnimationFrame(scanLoop);
+}
+
+function setScanStatus(type, msg){
+  scanStatus.className = 'scan-status ' + type;
+  scanStatus.textContent = msg;
+}
+
+function handleScannedToken(token){
+  const sesi = activeSessions.find(s=>s.token===token);
+  if(!sesi){
+    setScanStatus('bad','Kode QR/sesi tidak ditemukan atau sudah dihapus. Minta admin membuat ulang QR.');
+    return;
+  }
+  selectedSession = sesi;
+  const identityBox = document.getElementById('absenMhsIdentity');
+  if(currentUser && currentUser.role==='mahasiswa'){
+    setScanStatus('ok','Sesi "' + sesi.matkulNama + '" terverifikasi! Konfirmasi kehadiran Anda di bawah.');
+    identityBox.textContent = 'NIM: ' + currentUser.nim + ' — Nama: ' + currentUser.nama + ' — MK: ' + sesi.matkulNama;
+    identityBox.style.display='block';
+  } else {
+    setScanStatus('ok','Sesi "' + sesi.matkulNama + '" terverifikasi! Silakan pilih NIM untuk konfirmasi.');
+    identityBox.style.display='none';
+  }
+  document.getElementById('absenForm').style.display='block';
+}
+
+document.getElementById('btnVerifyManual').addEventListener('click', function(){
+  const val = document.getElementById('manualToken').value.trim();
+  if(!val){ showToast('Masukkan kode sesi terlebih dahulu.'); return; }
+  handleScannedToken(val);
+});
+
+/* ============ REKAP KEHADIRAN ============ */
+let absensi = [];
+let nextAbsenId = 1;
+let editingAbsenId = null;
+
+function hitungStatus(sesi){
+  if(!sesi || !sesi.jamSelesai) return 'Hadir';
+  const now = new Date();
+  const [h,m] = sesi.jamSelesai.split(':').map(Number);
+  const cutoff = new Date(now);
+  cutoff.setHours(h, m, 0, 0);
+  return now > cutoff ? 'Tidak Hadir' : 'Hadir';
+}
+
+document.getElementById('btnKonfirmasiAbsen').addEventListener('click', function(){
+  if(!selectedSession){ showToast('Sesi belum diverifikasi.'); return; }
+  const nim = (currentUser && currentUser.role==='mahasiswa') ? currentUser.nim : document.getElementById('absenNimSelect').value;
+  const mhs = mahasiswa.find(m=>m.nim===nim);
+  if(!mhs){ showToast('Pilih NIM Anda terlebih dahulu.'); return; }
+  const dup = absensi.find(a=>a.token===selectedSession.token && a.nim===nim);
+  if(dup){ showToast('Anda sudah tercatat hadir untuk mata kuliah ini.'); return; }
+
+  const now = new Date();
+  const jam = now.toLocaleTimeString('id-ID');
+  const status = hitungStatus(selectedSession);
+
+  absensi.push({
+    id: nextAbsenId++, tanggal: selectedSession.tanggal, matkul: selectedSession.matkulNama, token: selectedSession.token,
+    nim: mhs.nim, nama: mhs.nama, prodi: mhs.prodi, pts: mhs.pts, jam, status
+  });
+  renderRekap();
+  renderRiwayat();
+  renderJadwalMhs();
+  showToast(status==='Hadir' ? 'Absen berhasil — Hadir ✅' : 'Absen tercatat lewat batas jam — Tidak Hadir ⚠');
+
+  document.getElementById('absenForm').style.display='none';
+  document.getElementById('absenNimSelect').value='';
+  document.getElementById('absenMhsIdentity').style.display='none';
+  document.getElementById('manualToken').value='';
+  selectedSession = null;
+  setScanStatus('idle','Kamera belum aktif. Pilih jadwal di atas, arahkan ke QR di layar admin, atau masukkan kode sesi manual di bawah.');
+});
+
+/* ============ RIWAYAT SAYA (MAHASISWA) ============ */
+function renderRiwayat(){
+  if(!currentUser || currentUser.role!=='mahasiswa') return;
+  const body = document.getElementById('riwayatTableBody');
+  const empty = document.getElementById('riwayatEmptyState');
+  const rows = absensi.filter(a=>a.nim===currentUser.nim).slice().sort((a,b)=> (a.tanggal+a.jam) < (b.tanggal+b.jam) ? 1 : -1);
+  body.innerHTML='';
+  if(rows.length===0){
+    empty.style.display='block';
+  } else {
+    empty.style.display='none';
+    rows.forEach((row,i)=>{
+      const tr=document.createElement('tr');
+      const statusBadge = row.status==='Hadir' ? `<span class="badge hadir">Hadir</span>` : `<span class="badge tidakhadir">Tidak Hadir</span>`;
+      tr.innerHTML = `<td>${i+1}</td><td>${row.tanggal}</td><td><span class="badge sesi">${row.matkul}</span></td><td>${row.jam}</td><td>${statusBadge}</td>`;
+      body.appendChild(tr);
+    });
+  }
+  document.getElementById('riwayatCount').textContent = rows.length;
+}
+
+function simpanRekapManual(e){
+  e.preventDefault();
+  const tanggal = document.getElementById('rekapTanggal').value;
+  const matkulId = Number(document.getElementById('rekapMatkulSelect').value);
+  const mk = matkulList.find(m=>m.id===matkulId);
+  const nim = document.getElementById('rekapNim').value;
+  const jam = document.getElementById('rekapJam').value.trim();
+  const status = document.getElementById('rekapStatus').value;
+  const mhs = mahasiswa.find(m=>m.nim===nim);
+
+  if(!nim || !mhs){ showToast('Pilih NIM mahasiswa.'); return; }
+  if(!tanggal || !mk){ showToast('Lengkapi tanggal dan mata kuliah.'); return; }
+
+  if(editingAbsenId!==null){
+    const idx = absensi.findIndex(a=>a.id===editingAbsenId);
+    if(idx!==-1){
+      absensi[idx] = {...absensi[idx], tanggal, matkul:mk.nama, nim:mhs.nim, nama:mhs.nama, prodi:mhs.prodi, pts:mhs.pts, jam: jam || absensi[idx].jam, status};
+    }
+    showToast('Data kehadiran diperbarui.');
+    cancelEditRekap();
+  } else {
+    absensi.push({
+      id: nextAbsenId++, tanggal, matkul:mk.nama, token:'manual-'+nextAbsenId, nim:mhs.nim, nama:mhs.nama, prodi:mhs.prodi, pts:mhs.pts,
+      jam: jam || new Date().toLocaleTimeString('id-ID'), status
+    });
+    showToast('Data kehadiran ditambahkan.');
+    document.getElementById('rekapJam').value='';
+    document.getElementById('rekapNim').value='';
+  }
+  renderRekap();
+  renderRiwayat();
+}
+
+function enterEditRekap(row){
+  editingAbsenId = row.id;
+  document.getElementById('rekapTanggal').value = row.tanggal;
+  const mk = matkulList.find(m=>m.nama===row.matkul);
+  document.getElementById('rekapMatkulSelect').value = mk ? mk.id : '';
+  document.getElementById('rekapNim').value = row.nim;
+  document.getElementById('rekapJam').value = row.jam;
+  document.getElementById('rekapStatus').value = row.status;
+  document.getElementById('rekapSubmitBtn').textContent = '✓ Update Data';
+  document.getElementById('rekapCancelEdit').style.display='inline-block';
+  document.getElementById('tabRekap').scrollIntoView({behavior:'smooth', block:'start'});
+  renderRekap();
+}
+function cancelEditRekap(){
+  editingAbsenId = null;
+  document.getElementById('rekapSubmitBtn').textContent = '+ Simpan Data';
+  document.getElementById('rekapCancelEdit').style.display='none';
+  document.getElementById('rekapJam').value='';
+  document.getElementById('rekapNim').value='';
+  renderRekap();
+}
+document.getElementById('rekapCancelEdit').addEventListener('click', cancelEditRekap);
+
+const filterSearch = document.getElementById('filterSearch');
+const filterTanggal = document.getElementById('filterTanggal');
+const filterMatkul = document.getElementById('filterMatkul');
+const filterStatus = document.getElementById('filterStatus');
+const filterProdi = document.getElementById('filterProdi');
+
+function refreshMatkulFilter(){
+  const current = filterMatkul.value;
+  const namaList = [...new Set(absensi.map(a=>a.matkul).filter(Boolean))];
+  filterMatkul.innerHTML = '<option value="">Semua</option>' + namaList.map(n=>`<option value="${n}">${n}</option>`).join('');
+  if(namaList.includes(current)) filterMatkul.value = current;
+}
+
+function getFilteredRekap(){
+  const q = filterSearch.value.trim().toLowerCase();
+  return absensi.filter(row=>{
+    if(filterTanggal.value && row.tanggal !== filterTanggal.value) return false;
+    if(filterMatkul.value && row.matkul !== filterMatkul.value) return false;
+    if(filterStatus.value && row.status !== filterStatus.value) return false;
+    if(filterProdi.value && row.prodi !== filterProdi.value) return false;
+    if(q && !(row.nama.toLowerCase().includes(q) || row.nim.toLowerCase().includes(q))) return false;
+    return true;
+  });
+}
+
+function renderRekap(){
+  const rekapTableBody = document.getElementById('rekapTableBody');
+  const rekapEmptyState = document.getElementById('rekapEmptyState');
+  refreshMatkulFilter();
+  const filtered = getFilteredRekap();
+  rekapTableBody.innerHTML='';
+
+  if(absensi.length===0){
+    rekapEmptyState.style.display='block';
+    rekapEmptyState.innerHTML = '<span class="emoji">🗂</span><b>Belum ada data kehadiran</b>Absen lewat tab "Absensi QR" atau isi manual di atas.';
+  } else if(filtered.length===0){
+    rekapEmptyState.style.display='block';
+    rekapEmptyState.innerHTML = '<span class="emoji">🔍</span><b>Tidak ditemukan</b>Coba ubah kata kunci atau reset filter.';
+  } else {
+    rekapEmptyState.style.display='none';
+    filtered.forEach((row,i)=>{
+      const tr=document.createElement('tr');
+      if(row.id===editingAbsenId) tr.classList.add('editing-row');
+      const statusBadge = row.status==='Hadir' ? `<span class="badge hadir">Hadir</span>` : `<span class="badge tidakhadir">Tidak Hadir</span>`;
+      tr.innerHTML = `<td>${i+1}</td><td>${row.tanggal}</td><td><span class="badge sesi">${row.matkul}</span></td>
+        <td>${row.nim}</td><td>${row.nama}</td><td>${row.prodi||'-'}</td><td>${row.pts||'-'}</td>
+        <td>${row.jam}</td><td>${statusBadge}</td>
+        <td><div class="row-actions">
+          <button class="edit-btn" data-id="${row.id}">Edit</button>
+          <button class="del-btn" data-id="${row.id}">Hapus</button>
+        </div></td>`;
+      rekapTableBody.appendChild(tr);
+    });
+  }
+  document.getElementById('rowCount').textContent = filtered.length;
+  document.getElementById('rowTotal').textContent = absensi.length;
+}
+
+document.getElementById('rekapTableBody').addEventListener('click', function(e){
+  const id = Number(e.target.dataset.id);
+  if(e.target.classList.contains('edit-btn')){
+    const row = absensi.find(a=>a.id===id); if(row) enterEditRekap(row);
+  }
+  if(e.target.classList.contains('del-btn')){
+    absensi = absensi.filter(a=>a.id!==id);
+    if(editingAbsenId===id) cancelEditRekap();
+    renderRekap();
+    showToast('Data kehadiran dihapus.');
+  }
+});
+
+[filterSearch, filterTanggal, filterMatkul, filterStatus, filterProdi].forEach(el=>{
+  el.addEventListener('input', renderRekap);
+  el.addEventListener('change', renderRekap);
+});
+document.getElementById('filterClear').addEventListener('click', function(){
+  filterSearch.value=''; filterTanggal.value=''; filterMatkul.value=''; filterStatus.value=''; filterProdi.value='';
+  renderRekap();
+});
+
+/* ============ UNDUH DATA ============ */
+function buildAoA(){
+  const header = ['No','Tanggal','Mata Kuliah','NIM','Nama','Prodi','Perguruan Tinggi (PTS)','Jam Absen','Status'];
+  const rows = getFilteredRekap().map((r,i)=>[i+1, r.tanggal, r.matkul, r.nim, r.nama, r.prodi||'-', r.pts||'-', r.jam, r.status]);
+  return [header, ...rows];
+}
+document.getElementById('downloadXlsx').addEventListener('click', function(){
+  if(absensi.length===0){ showToast('Belum ada data untuk diunduh.'); return; }
+  const aoa = buildAoA();
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols']=[{wch:5},{wch:12},{wch:10},{wch:14},{wch:20},{wch:20},{wch:26},{wch:12},{wch:12}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Rekap Kehadiran');
+  XLSX.writeFile(wb, `rekap-absensi-${todayStr()}.xlsx`);
+  showToast('File Excel diunduh.');
+});
+document.getElementById('downloadCsv').addEventListener('click', function(){
+  if(absensi.length===0){ showToast('Belum ada data untuk diunduh.'); return; }
+  const aoa = buildAoA();
+  const csv = aoa.map(row=>row.map(v=>{
+    const s=String(v);
+    return s.includes(',')||s.includes('"') ? '"'+s.replace(/"/g,'""')+'"' : s;
+  }).join(',')).join('\n');
+  const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download=`rekap-absensi-${todayStr()}.csv`; a.click();
+  URL.revokeObjectURL(url);
+  showToast('File CSV diunduh.');
+});
+
+/* init */
+renderMhs();
+renderMatkul();
+renderSesiAktifList();
+renderRekap();
+</script>
+</body>
+</html>
